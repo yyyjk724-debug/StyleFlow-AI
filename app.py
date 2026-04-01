@@ -5,7 +5,7 @@ import re
 # 1. 페이지 설정
 st.set_page_config(page_title="StyleFlow AI", page_icon="🌿", layout="wide")
 
-# 2. 다크모드 대응 레이아웃 디자인 (초록 & 회색)
+# 2. 다크모드 대응 레이아웃 디자인
 with st.sidebar:
     st.header("🌓 설정")
     dark_mode = st.toggle("흑백(다크) 모드 활성화", value=False)
@@ -18,9 +18,10 @@ if dark_mode:
 else:
     bg_color, text_color, card_bg, border_color = "#f9fafb", "#111827", "#ffffff", "#d1d5db"
 
+# CSS 주입 (f-string 중괄호 오류 해결됨)
 st.markdown(f"""
     <style>
-    .stApp {{ background-color: {bg_color}; color: {text_color}; }}
+    .stApp {{ background-color: {bg_color} !important; color: {text_color} !important; }}
     .main-title {{
         font-size: 4.2rem; font-weight: 900; color: {text_color};
         text-align: center; letter-spacing: -3px; margin-bottom: 0px;
@@ -32,7 +33,7 @@ st.markdown(f"""
         transition: all 0.3s ease;
         font-size: 16px !important;
         padding: 20px;
-    }
+    }}
     .stTextArea textarea:focus {{ border-color: #10b981 !important; transform: translateY(-4px); }}
     .table-section {{
         background-color: rgba(16, 185, 129, 0.1);
@@ -50,39 +51,32 @@ col_in, col_out = st.columns(2, gap="large")
 
 with col_in:
     st.markdown("### 📥 AI 답변 붙여넣기")
-    # key를 부여하여 상태 변화를 즉시 감지하게 합니다.
-    user_input = st.text_area("Input", height=500, placeholder="여기에 내용을 붙여넣으세요...", label_visibility="collapsed", key="input_text")
+    # user_input에 내용이 들어오는 즉시 실시간 변환
+    user_input = st.text_area("Input", height=500, placeholder="여기에 내용을 붙여넣으세요...", label_visibility="collapsed")
 
 with col_out:
     st.markdown("### ✅ 변환 결과")
     
-    # ⚡ [핵심] user_input에 내용이 들어오는 즉시 아래 코드가 실행됩니다 (클릭 불필요)
-    if st.session_state.input_text:
+    if user_input:
         # 서식 정제 로직
-        clean_text = re.sub(r'(^|\n)[*#>-]\s?', r'\1', st.session_state.input_text)
+        clean_text = re.sub(r'(^|\n)[*#>-]\s?', r'\1', user_input)
         clean_text = re.sub(r'[*_~`]', '', clean_text)
         
-        # 실시간 결과 노출
-        st.text_area("Output", value=clean_text, height=350, label_visibility="collapsed", key="output_text")
-        
-        # 복사 도구
+        # 즉시 결과 노출
+        st.text_area("Output", value=clean_text, height=350, label_visibility="collapsed")
         st.markdown("<p style='color: #10b981; font-weight: 700; margin-top: 10px;'>✔ 위 박스를 클릭 후 Ctrl+A → Ctrl+C 하세요!</p>", unsafe_allow_html=True)
-        if st.button("📋 복사 전용 텍스트 보기"):
-            st.code(clean_text, language=None)
-
+        
         # 5. 표 데이터 자동 처리 (한셀/엑셀 호환)
-        if '|' in st.session_state.input_text:
+        if '|' in user_input:
             st.markdown('<div class="table-section">', unsafe_allow_html=True)
             st.markdown("<h4 style='color: #10b981; margin-top:0;'>📊 표 데이터 감지 완료</h4>", unsafe_allow_html=True)
             try:
-                lines = [l.strip() for l in st.session_state.input_text.split('\n') if '|' in l]
+                lines = [l.strip() for l in user_input.split('\n') if '|' in l]
                 valid_lines = [l for l in lines if '---' not in l]
                 if len(valid_lines) > 1:
                     headers = [h.strip() for h in valid_lines[0].split('|') if h.strip()]
                     data = [[cell.strip() for cell in l.split('|') if cell.strip()] for l in valid_lines[1:]]
                     df = pd.DataFrame(data, columns=headers)
-                    
-                    # 한셀/엑셀 붙여넣기용 탭 데이터 생성
                     tsv_data = df.to_csv(index=False, sep='\t', header=False)
                     
                     st.markdown("**한셀/엑셀용 복사 데이터**")
@@ -92,7 +86,7 @@ with col_out:
                     with st.expander("데이터 미리보기", expanded=True):
                         st.dataframe(df, use_container_width=True)
             except:
-                st.caption("표 형식을 분석 중입니다...")
+                pass
             st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.markdown(
