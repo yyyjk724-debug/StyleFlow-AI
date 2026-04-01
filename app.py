@@ -100,4 +100,31 @@ with col_out:
         # 2. 표 데이터 자동 감지
         if '|' in user_content:
             st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
-            st.markdown('<div class="
+            st.markdown('<div class="table-badge">📊 표 데이터 감지됨</div>', unsafe_allow_html=True)
+            try:
+                lines = [l.strip() for l in user_content.split('\n') if '|' in l]
+                valid_lines = [l for l in lines if '---' not in l]
+                if len(valid_lines) > 1:
+                    headers = [h.strip() for h in valid_lines[0].split('|') if h.strip()]
+                    data = [[cell.strip() for cell in l.split('|') if cell.strip()] for l in valid_lines[1:]]
+                    df = pd.DataFrame(data, columns=headers)
+                    tsv_data = df.to_csv(index=False, sep='\t', header=False)
+                    
+                    st.markdown("<p style='font-size: 0.9rem; font-weight: 600; color: #374151;'>한셀/엑셀 전용 복사</p>", unsafe_allow_html=True)
+                    st.text_area("Table Output", value=tsv_data, height=120, label_visibility="collapsed")
+                    
+                    with st.expander("데이터 미리보기", expanded=True):
+                        st.dataframe(df, use_container_width=True)
+            except:
+                pass
+    else:
+        st.markdown(
+            """
+            <div style="padding: 120px 20px; text-align: center; border: 2px dashed #d1d5db; border-radius: 10px; color: #9ca3af; background-color: #ffffff;">
+                왼쪽창에 내용을 입력하면<br>결과가 실시간으로 나타납니다.
+            </div>
+            """, unsafe_allow_html=True
+        )
+
+st.markdown("<br><br><hr>", unsafe_allow_html=True)
+st.markdown('<p style="text-align: center; color: #9ca3af; font-size: 0.8rem;">© 2026 StyleFlow AI. Optimized for Academic Efficiency.</p>', unsafe_allow_html=True)
