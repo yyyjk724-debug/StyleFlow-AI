@@ -153,4 +153,4 @@ with col_out:
         )
 
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #9ca3af
+st.markdown('<p style="text-align: center; color: #9ca3af; font-size: 0.85rem;">© 2026 StyleFlow AI. Academic & Professional Document Sync Tool.</p>', unsafe_allow_html=True)
