@@ -5,13 +5,13 @@ from io import BytesIO
 
 st.set_page_config(page_title="StyleFlow AI - 폰트 최적화", layout="wide")
 
-# CSS를 이용해 화면을 깔끔하게 정리
+# 스타일 설정 (오타 수정됨)
 st.markdown("""
     <style>
     .main { background-color: #f5f7f9; }
     .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #4CAF50; color: white; }
     </style>
-    """, unsafe_allow_status_html=True)
+    """, unsafe_allow_html=True)
 
 st.title("🎨 StyleFlow AI: 폰트 & 서식 동기화")
 st.info("AI의 답변을 복사해 넣고, 원하는 폰트를 설정한 뒤 '서식 포함 복사'를 누르세요.")
@@ -32,21 +32,15 @@ if user_content:
     
     with col1:
         st.markdown(f"### 1. PPT/워드용 서식 복사")
-        # HTML 서식을 입힌 미리보기
         styled_html = f"""
-            <div id="copy_target" style="font-family: '{target_font}'; font-size: {font_size}pt; color: {font_color}; line-height: 1.6; white-space: pre-wrap;">
+            <div style="font-family: '{target_font}'; font-size: {font_size}pt; color: {font_color}; line-height: 1.6; white-space: pre-wrap; padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
             {user_content}
             </div>
         """
         st.markdown("**[미리보기]**")
-        st.markdown(styled_html, unsafe_allow_status_html=True)
+        st.markdown(styled_html, unsafe_allow_html=True)
         
-        # 클립보드 복사를 위한 버튼 (자바스크립트 활용)
-        if st.button("✨ G마켓 산스 등 서식 포함 복사하기"):
-            # 실제 클립보드에 HTML 서식을 밀어넣는 기능은 브라우저 보안상 
-            # 텍스트와 함께 서식 가이드를 제공하거나 파일로 변환하는 방식을 씁니다.
-            st.success(f"'{target_font}' 스타일 가이드가 적용되었습니다! (PPT 붙여넣기 준비 완료)")
-            st.code(f"적용 폰트: {target_font} / 크기: {font_size}pt")
+        st.warning("💡 위 미리보기 내용을 마우스로 드래그해서 복사(Ctrl+C)한 뒤, PPT에 붙여넣기(Ctrl+V) 하세요!")
 
     with col2:
         st.markdown("### 2. 한셀/엑셀용 표 변환")
@@ -58,11 +52,11 @@ if user_content:
                 df = pd.DataFrame(data, columns=headers)
                 st.dataframe(df)
                 tsv_data = df.to_csv(index=False, sep='\t')
-                st.download_button("한셀용 파일 다운로드", tsv_data, "data.csv")
+                st.download_button("한셀용 데이터 다운로드", tsv_data, "data.tsv")
             except:
                 st.warning("표 형식을 인식할 수 없습니다.")
         else:
             st.write("표 데이터가 감지되지 않았습니다.")
 
 st.markdown("---")
-st.caption("Tip: PPT에서 붙여넣기 할 때 '대상 테마 사용' 대신 '원본 서식 유지'를 선택하면 더 정확합니다.")
+st.caption("Tip: PPT에서 붙여넣기 할 때 '원본 서식 유지'를 선택하면 폰트가 더 잘 유지됩니다.")
