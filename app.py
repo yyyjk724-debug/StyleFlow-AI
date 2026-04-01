@@ -5,12 +5,12 @@ import re
 # 1. 페이지 설정
 st.set_page_config(page_title="StyleFlow AI", page_icon="🌿", layout="wide")
 
-# 2. 다크모드 및 디자인 CSS
+# 2. 다크모드 설정 (사이드바)
 with st.sidebar:
     st.header("🌓 테마 설정")
     dark_mode = st.toggle("흑백 모드 활성화", value=False)
 
-# 테마 색상 설정
+# 테마 색상 (중괄호 오류 방지를 위해 {{ }} 사용)
 bg, txt, card, brd = ("#111827", "#f9fafb", "#1f2937", "#374151") if dark_mode else ("#f9fafb", "#111827", "#ffffff", "#d1d5db")
 
 st.markdown(f"""
@@ -33,51 +33,52 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. 헤더
+# 3. 헤더 (StyleFlow AI 제목 강조)
 st.markdown('<h1 class="main-title">StyleFlow AI</h1>', unsafe_allow_html=True)
 
-# 4. 실시간 변환 로직 (핵심: 세션 상태와 on_change 활용)
-if 'clean_output' not in st.session_state:
-    st.session_state.clean_output = ""
-
-def transform():
-    # 입력값이 들어오면 즉시 서식을 정제하여 저장함
-    raw = st.session_state.user_input
-    if raw:
-        # 서식 제거 로직
-        clean = re.sub(r'(^|\n)[*#>-]\s?', r'\1', raw)
-        clean = re.sub(r'[*_~`]', '', clean)
-        st.session_state.clean_output = clean
-
+# 4. 메인 레이아웃 (좌우 직통 연결)
 col_in, col_out = st.columns(2, gap="large")
 
 with col_in:
     st.markdown("### 📥 AI 답변 입력")
-    # ⚡ on_change를 통해 입력이 감지되는 즉시 transform 함수를 실행함
-    st.text_area(
-        "Input", 
-        height=550, 
-        placeholder="내용을 붙여넣으면 즉시 변환됩니다...", 
-        label_visibility="collapsed",
-        key="user_input",
-        on_change=transform
-    )
+    # ⚡ [핵심] user_input이 바뀌면 아래 모든 코드가 자동으로 재실행됩니다.
+    user_input = st.text_area("Input", height=550, placeholder="여기에 내용을 붙여넣으세요...", label_visibility="collapsed")
 
 with col_out:
     st.markdown("### ✅ 변환 결과")
     
-    # ⚡ 변환된 결과를 실시간으로 노출함
-    st.text_area(
-        "Output", 
-        value=st.session_state.clean_output, 
-        height=350, 
-        label_visibility="collapsed",
-        key="display_output"
-    )
-    
-    if st.session_state.clean_output:
-        st.markdown("<p style='color: #10b981; font-weight: 700;'>복사 버튼을 눌러서 간편하게 복사하세요.</p>", unsafe_allow_html=True)
+    # ⚡ [실시간 엔진] 입력값이 있는 순간 즉시 실행
+    if user_input:
+        # 서식 정제 로직
+        clean_text = re.sub(r'(^|\n)[*#>-]\s?', r'\1', user_input)
+        clean_text = re.sub(r'[*_~`]', '', clean_text)
+        
+        # 즉시 결과 노출
+        st.text_area("Output", value=clean_text, height=350, label_visibility="collapsed")
+        
+        # 📋 복사 버튼 (클릭 시 복사 가능한 박스 노출)
+        st.markdown("<p style='color: #10b981; font-weight: 700; margin-top:10px;'>원클릭 복사를 위해 아래 버튼을 누르세요.</p>", unsafe_allow_html=True)
         if st.button("📋 변환 결과 복사하기"):
-            st.code(st.session_state.clean_output, language=None)
+            st.code(clean_text, language=None)
+            st.success("위 박스 오른쪽의 아이콘을 눌러 복사하세요!")
+
+        # 📊 표 데이터 자동 처리 (한셀/엑셀용)
+        if '|' in user_input:
+            try:
+                lines = [l.strip() for l in user_input.split('\n') if '|' in l]
+                valid = [l for l in lines if '---' not in l]
+                if len(valid) > 1:
+                    headers = [h.strip() for h in valid[0].split('|') if h.strip()]
+                    data = [[cell.strip() for cell in l.split('|') if cell.strip()] for l in valid[1:]]
+                    df = pd.DataFrame(data, columns=headers)
+                    tsv_data = df.to_csv(index=False, sep='\t', header=False)
+                    
+                    st.divider()
+                    st.markdown("<h4 style='color: #10b981;'>📊 한셀/엑셀용 표 데이터</h4>", unsafe_allow_html=True)
+                    st.text_area("Table Output", value=tsv_data, height=120, label_visibility="collapsed")
+            except:
+                pass
+    else:
+        st.info("왼쪽창에 내용을 입력하면 실시간으로 정제됩니다.")
 
 st.markdown("<br><br><hr><p style='text-align: center; opacity: 0.5;'>© 2026 StyleFlow AI.</p>", unsafe_allow_html=True)
