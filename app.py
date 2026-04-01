@@ -2,48 +2,64 @@ import streamlit as st
 import pandas as pd
 import re
 
-st.set_page_config(page_title="StyleFlow AI - 실시간 서식 동기화", layout="wide")
+st.set_page_config(page_title="StyleFlow AI", layout="wide")
 
-# 화면 디자인 최적화 (좌우 배치를 통해 동선을 줄임)
+# 초간결 디자인: 불필요한 여백과 라벨 제거
 st.markdown("""
     <style>
     .main { background-color: #ffffff; }
     .stTextArea textarea { font-size: 15px !important; border-radius: 8px; border: 1px solid #d1d5db; }
-    h3 { color: #1f2937; margin-bottom: 10px; font-size: 1.2rem; }
-    .status-tag { padding: 4px 10px; background-color: #e5e7eb; border-radius: 15px; font-size: 0.8rem; color: #4b5563; }
+    h3 { color: #1f2937; font-size: 1.1rem; font-weight: 600; margin-bottom: 5px; }
+    /* 복사 버튼 스타일 */
+    .stButton>button {
+        background-color: #4f46e5;
+        color: white;
+        border-radius: 8px;
+        font-weight: bold;
+        border: none;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: #4338ca;
+        border: none;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("⚡ StyleFlow AI: 실시간 서식 세탁기")
-st.caption("AI 답변을 붙여넣는 즉시 모든 서식이 제거됩니다. 바로 복사해서 PPT에 붙이세요!")
+st.title("⚡ StyleFlow AI")
 
-# 좌우 레이아웃 분할 (입력과 출력을 한눈에!)
+# 좌우 레이아웃
 col_in, col_out = st.columns(2)
 
 with col_in:
-    st.markdown("### 📥 AI 답변 붙여넣기")
-    # 내용이 변경되면 스트림릿은 자동으로 하단 코드를 재실행합니다.
+    st.markdown("### 📥 내용을 붙여넣으세요")
     user_content = st.text_area(
-        "내용 입력 시 즉시 변환됨", 
-        height=500, 
-        placeholder="ChatGPT나 Gemini의 답변을 여기에 Ctrl+V 하세요...",
+        "Input",
+        height=500,
+        placeholder="AI 답변을 여기에 Ctrl+V 하세요...",
         label_visibility="collapsed"
     )
 
 with col_out:
-    st.markdown("### 📤 정제된 결과 (PPT/한셀용)")
+    st.markdown("### 📤 결과")
     
     if user_content:
-        # 1. 일반 텍스트 정제 (불필요한 마크다운 기호 제거)
-        # 텍스트 앞에 붙는 *, -, # 등을 제거하여 PPT 서식을 방해하지 않게 함
-        clean_text = re.sub(r'(^|\n)[*#>-]\s?', r'\1', user_content) # 리스트 기호 제거
-        clean_text = re.sub(r'[*_~`]', '', clean_text) # 강조 기호 제거
+        # 1. 서식 제거 로직
+        # 리스트 기호 및 마크다운 특수문자 제거
+        clean_text = re.sub(r'(^|\n)[*#>-]\s?', r'\1', user_content)
+        clean_text = re.sub(r'[*_~`]', '', clean_text)
         
-        # PPT/워드용 출력 박스
-        st.info("💡 아래 내용을 복사해서 PPT에 붙여넣으면 기존 폰트를 그대로 따라갑니다.")
-        st.text_area("순수 텍스트 결과:", value=clean_text, height=200)
+        # '변환 결과'라는 이름으로 깔끔하게 출력
+        st.markdown("**변환 결과**")
+        st.text_area("Output", value=clean_text, height=250, label_visibility="collapsed")
         
-        # 2. 표 데이터 감지 시 자동으로 하단에 노출
+        # 2. 원클릭 복사 버튼 (가장 중요한 기능!)
+        # 서식 없이 텍스트만 복사되도록 유도
+        if st.button("✨ 클릭하여 결과 복사하기"):
+            st.write(f'<script>navigator.clipboard.writeText(`{clean_text}`)</script>', unsafe_allow_html=True)
+            st.success("클립보드에 복사되었습니다! 이제 PPT나 한글에 붙여넣으세요.")
+
+        # 3. 표 데이터 (있을 경우만 하단에 조용히 표시)
         if '|' in user_content:
             st.divider()
             try:
@@ -53,16 +69,15 @@ with col_out:
                     headers = [h.strip() for h in valid_lines[0].split('|') if h.strip()]
                     data = [[cell.strip() for cell in l.split('|') if cell.strip()] for l in valid_lines[1:]]
                     df = pd.DataFrame(data, columns=headers)
-                    
-                    # 한셀용 탭 데이터
                     tsv_data = df.to_csv(index=False, sep='\t', header=False)
                     
-                    st.success("📊 표 데이터 감지 완료! 한셀에 바로 붙여넣으세요.")
-                    st.text_area("한셀 전용 데이터:", value=tsv_data, height=150)
+                    st.markdown("**한셀용 데이터**")
+                    st.text_area("Table Output", value=tsv_data, height=100, label_visibility="collapsed")
+                    st.caption("표 내용은 위 박스를 복사해서 한셀에 붙이시면 됩니다.")
             except:
-                st.warning("표 데이터를 정리하는 중입니다...")
+                pass
     else:
-        st.write("👈 왼쪽창에 내용을 입력하면 결과가 여기에 나타납니다.")
+        st.info("왼쪽에 내용을 넣으면 여기에 결과가 나타납니다.")
 
 st.markdown("---")
-st.caption("Tip: 이 서비스는 '서식 꼬리표'를 실시간으로 잘라냅니다. 복사 후 PPT에서 '원본 서식 유지'로 붙여넣으면 가장 완벽합니다.")
+st.caption("Tip: 복사 버튼을 누르면 서식이 완전히 제거된 상태로 복사되어, 어떤 프로그램이든 '기존 서식'에 맞춰 들어갑니다.")
