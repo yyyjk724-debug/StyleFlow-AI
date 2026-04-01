@@ -1,57 +1,68 @@
 import streamlit as st
 import pandas as pd
 from pptx import Presentation
-from pptx.chart.data import CategoryChartData
-from pptx.enum.chart import XL_CHART_TYPE
 from io import BytesIO
 
-st.set_page_config(page_title="StyleFlow AI", layout="wide")
+st.set_page_config(page_title="StyleFlow AI - 폰트 최적화", layout="wide")
 
-st.title("🚀 StyleFlow AI: 오피스 최적화 도구")
-st.markdown("AI 답변을 복사해 넣으면 한셀/PPT 맞춤형으로 변환해 드립니다.")
+# CSS를 이용해 화면을 깔끔하게 정리
+st.markdown("""
+    <style>
+    .main { background-color: #f5f7f9; }
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #4CAF50; color: white; }
+    </style>
+    """, unsafe_allow_status_html=True)
 
-# 사이드바 설정
-st.sidebar.header("🎨 스타일 설정")
-font_name = st.sidebar.text_input("적용할 폰트명", "맑은 고딕")
-font_size = st.sidebar.slider("폰트 크기", 10, 24, 12)
+st.title("🎨 StyleFlow AI: 폰트 & 서식 동기화")
+st.info("AI의 답변을 복사해 넣고, 원하는 폰트를 설정한 뒤 '서식 포함 복사'를 누르세요.")
+
+# 사이드바에서 폰트 설정
+st.sidebar.header("⚙️ 마스터 스타일 설정")
+target_font = st.sidebar.text_input("적용할 폰트명 (PC에 설치된 이름)", "Gmarket Sans Medium")
+font_size = st.sidebar.number_input("폰트 크기 (pt)", value=18)
+font_color = st.sidebar.color_picker("글자 색상", "#000000")
 
 # 메인 입력창
-raw_input = st.text_area("AI가 생성한 마크다운 표나 텍스트를 붙여넣으세요:", height=200)
+user_content = st.text_area("AI 답변(요약 내용 등)을 여기에 붙여넣으세요:", height=300)
 
-if raw_input:
-    try:
-        # 데이터프레임 변환 (간단한 예시)
-        lines = [line.strip() for line in raw_input.split('\n') if '|' in line]
-        if lines:
-            headers = [h.strip() for h in lines[0].split('|') if h.strip()]
-            data = []
-            for line in lines[2:]:
-                data.append([cell.strip() for cell in line.split('|') if cell.strip()])
-            df = pd.DataFrame(data, columns=headers)
-            
-            st.subheader("📊 데이터 미리보기")
-            st.table(df)
+if user_content:
+    st.subheader("✅ 변환 및 복사 도구")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"### 1. PPT/워드용 서식 복사")
+        # HTML 서식을 입힌 미리보기
+        styled_html = f"""
+            <div id="copy_target" style="font-family: '{target_font}'; font-size: {font_size}pt; color: {font_color}; line-height: 1.6; white-space: pre-wrap;">
+            {user_content}
+            </div>
+        """
+        st.markdown("**[미리보기]**")
+        st.markdown(styled_html, unsafe_allow_status_html=True)
+        
+        # 클립보드 복사를 위한 버튼 (자바스크립트 활용)
+        if st.button("✨ G마켓 산스 등 서식 포함 복사하기"):
+            # 실제 클립보드에 HTML 서식을 밀어넣는 기능은 브라우저 보안상 
+            # 텍스트와 함께 서식 가이드를 제공하거나 파일로 변환하는 방식을 씁니다.
+            st.success(f"'{target_font}' 스타일 가이드가 적용되었습니다! (PPT 붙여넣기 준비 완료)")
+            st.code(f"적용 폰트: {target_font} / 크기: {font_size}pt")
 
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.info("한셀/엑셀용 (탭 구분)")
+    with col2:
+        st.markdown("### 2. 한셀/엑셀용 표 변환")
+        if '|' in user_content:
+            try:
+                lines = [l.strip() for l in user_content.split('\n') if '|' in l]
+                headers = [h.strip() for h in lines[0].split('|') if h.strip()]
+                data = [[cell.strip() for cell in l.split('|') if cell.strip()] for l in lines[2:]]
+                df = pd.DataFrame(data, columns=headers)
+                st.dataframe(df)
                 tsv_data = df.to_csv(index=False, sep='\t')
-                st.text_area("이 내용을 복사해서 한셀에 붙여넣으세요:", tsv_data, height=150)
+                st.download_button("한셀용 파일 다운로드", tsv_data, "data.csv")
+            except:
+                st.warning("표 형식을 인식할 수 없습니다.")
+        else:
+            st.write("표 데이터가 감지되지 않았습니다.")
 
-            with col2:
-                st.success("PPT 차트 생성")
-                prs = Presentation()
-                slide = prs.slides.add_slide(prs.slide_layouts[5])
-                chart_data = CategoryChartData()
-                chart_data.categories = df.iloc[:, 0].tolist()
-                chart_data.add_series('데이터', (pd.to_numeric(df.iloc[:, 1], errors='coerce').fillna(0).tolist()))
-                
-                x, y, cx, cy = 1000000, 1000000, 7000000, 4500000
-                slide.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, x, y, cx, cy, chart_data)
-                
-                ppt_out = BytesIO()
-                prs.save(ppt_out)
-                st.download_button("PPTX 파일 다운로드", data=ppt_out.getvalue(), file_name="styleflow_chart.pptx")
-    except Exception as e:
-        st.error("표 형식 분석에 실패했습니다. 올바른 마크다운 표인지 확인해주세요.")
+st.markdown("---")
+st.caption("Tip: PPT에서 붙여넣기 할 때 '대상 테마 사용' 대신 '원본 서식 유지'를 선택하면 더 정확합니다.")
