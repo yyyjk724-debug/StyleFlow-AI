@@ -4,25 +4,13 @@ import re
 
 st.set_page_config(page_title="StyleFlow AI", layout="wide")
 
-# 초간결 디자인: 불필요한 여백과 라벨 제거
+# 디자인 설정 (더 깔끔하고 직관적으로)
 st.markdown("""
     <style>
     .main { background-color: #ffffff; }
-    .stTextArea textarea { font-size: 15px !important; border-radius: 8px; border: 1px solid #d1d5db; }
-    h3 { color: #1f2937; font-size: 1.1rem; font-weight: 600; margin-bottom: 5px; }
-    /* 복사 버튼 스타일 */
-    .stButton>button {
-        background-color: #4f46e5;
-        color: white;
-        border-radius: 8px;
-        font-weight: bold;
-        border: none;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #4338ca;
-        border: none;
-    }
+    .stTextArea textarea { font-size: 16px !important; border-radius: 8px; border: 1px solid #d1d5db; background-color: #fafafa; }
+    h3 { color: #1f2937; font-size: 1.2rem; font-weight: 600; margin-bottom: 10px; }
+    .copy-hint { font-size: 0.9rem; color: #6366f1; font-weight: bold; margin-bottom: 5px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -44,22 +32,21 @@ with col_out:
     st.markdown("### 📤 결과")
     
     if user_content:
-        # 1. 서식 제거 로직
-        # 리스트 기호 및 마크다운 특수문자 제거
+        # 1. 서식 제거 로직 (순수 텍스트 추출)
+        # AI 특유의 마크다운 기호들을 제거하여 PPT 서식에 맞게 정제
         clean_text = re.sub(r'(^|\n)[*#>-]\s?', r'\1', user_content)
         clean_text = re.sub(r'[*_~`]', '', clean_text)
         
-        # '변환 결과'라는 이름으로 깔끔하게 출력
-        st.markdown("**변환 결과**")
-        st.text_area("Output", value=clean_text, height=250, label_visibility="collapsed")
+        # 2. 변환 결과 출력 (라벨 최소화)
+        st.markdown("<p class='copy-hint'>✨ 아래 박스 안을 클릭하고 Ctrl+A -> Ctrl+C 하세요!</p>", unsafe_allow_html=True)
+        st.text_area(
+            "변환 결과", 
+            value=clean_text, 
+            height=400, 
+            label_visibility="visible"
+        )
         
-        # 2. 원클릭 복사 버튼 (가장 중요한 기능!)
-        # 서식 없이 텍스트만 복사되도록 유도
-        if st.button("✨ 클릭하여 결과 복사하기"):
-            st.write(f'<script>navigator.clipboard.writeText(`{clean_text}`)</script>', unsafe_allow_html=True)
-            st.success("클립보드에 복사되었습니다! 이제 PPT나 한글에 붙여넣으세요.")
-
-        # 3. 표 데이터 (있을 경우만 하단에 조용히 표시)
+        # 3. 표 데이터 (있을 경우만 하단에 표시)
         if '|' in user_content:
             st.divider()
             try:
@@ -71,13 +58,12 @@ with col_out:
                     df = pd.DataFrame(data, columns=headers)
                     tsv_data = df.to_csv(index=False, sep='\t', header=False)
                     
-                    st.markdown("**한셀용 데이터**")
+                    st.markdown("**📊 한셀용 데이터**")
                     st.text_area("Table Output", value=tsv_data, height=100, label_visibility="collapsed")
-                    st.caption("표 내용은 위 박스를 복사해서 한셀에 붙이시면 됩니다.")
             except:
                 pass
     else:
         st.info("왼쪽에 내용을 넣으면 여기에 결과가 나타납니다.")
 
 st.markdown("---")
-st.caption("Tip: 복사 버튼을 누르면 서식이 완전히 제거된 상태로 복사되어, 어떤 프로그램이든 '기존 서식'에 맞춰 들어갑니다.")
+st.caption("Tip: 결과창의 텍스트는 서식이 완전히 제거된 '순수 상태'입니다. 복사해서 PPT에 붙여넣으면 사용 중인 폰트로 즉시 바뀝니다.")
